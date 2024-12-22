@@ -252,3 +252,26 @@ def test_to_arrow_batch(duckdb_employee: DuckDBDataFrame):
     assert fifth_batch.column(4).to_pylist() == [100]
     with pytest.raises(StopIteration):
         record_batch_reader.read_next_batch()
+
+
+def test_join(duckdb_session: DuckDBSession, duckdb_employee: DuckDBDataFrame):
+    from sqlframe.duckdb import functions as F
+    store_1 = (
+        duckdb_session.table("employee")
+        .filter(F.col("store_id") == 1)
+        .select("store_id")
+        .withColumn(col=F.lit("new"), colName="store_name")
+    )
+    store_2 = (
+        duckdb_session.table("employee")
+        .filter(F.col("store_id") == 2)
+        .select("store_id")
+        .withColumn(col=F.lit("old"), colName="store_name")
+    )
+    combined = (
+        duckdb_session.table("employee")
+        .select("store_id")
+        .join(store_1, on="store_id", how="left")
+        .join(store_2, on="store_id", how="left")
+    )
+    print(combined.show())
